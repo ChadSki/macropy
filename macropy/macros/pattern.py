@@ -227,6 +227,8 @@ def build_matcher(tree, modified):
         return q%(LiteralMatcher(u%(tree.n)))
     if isinstance(tree, Str):
         return q%(LiteralMatcher(u%(tree.s)))
+    if isinstance(tree, NameConstant):
+        return q%(LiteralMatcher(ast%(tree.value)))
     if isinstance(tree, Name):
         if tree.id in ['True', 'False', 'None']:
             return q%(LiteralMatcher(ast%(tree)))
@@ -337,7 +339,7 @@ def switch(tree, arg, gen_sym):
     import string
     import random
     new_id = gen_sym()
-    for i in xrange(len(tree.body)):
+    for i in range(len(tree.body)):
         tree.body[i] = _maybe_rewrite_if(tree.body[i], new_id)
     tree.body = [Assign([Name(new_id, Store())], arg)] + tree.body
     return tree.body

@@ -28,19 +28,19 @@ class Macros(object):
 
     def expr(self, inside_out=False):
         def register(f):
-            self.expr_registry[f.func_name] = (f, inside_out)
+            self.expr_registry[f.__name__] = (f, inside_out)
             return f
         return register
 
     def decorator(self, inside_out=False):
         def register(f):
-            self.decorator_registry[f.func_name] = (f, inside_out)
+            self.decorator_registry[f.__name__] = (f, inside_out)
             return f
         return register
 
     def block(self, inside_out=False):
         def register(f):
-            self.block_registry[f.func_name] = (f, inside_out)
+            self.block_registry[f.__name__] = (f, inside_out)
             return f
         return register
 
@@ -124,7 +124,7 @@ class _MacroLoader(object):
             mod.__package__ = fullname
         else:
             mod.__package__ = fullname.rpartition('.')[0]
-        exec(compile(tree, self.file_name, "exec") in mod.__dict__)
+        exec(compile(tree, self.file_name, "exec"), mod.__dict__)
         return mod
 
 def process_ast(tree, modules):
@@ -165,7 +165,7 @@ def _expand_ast(tree, modules):
         """check if `tree` is a macro in `registry`, and if so use it to expand `args`"""
         if isinstance(tree, Name) and tree.id in registry:
             the_macro, inside_out = registry[tree.id]
-            new_tree = safe_splat(the_macro, *args, gen_sym = lambda: symbols.next())
+            new_tree = safe_splat(the_macro, *args, gen_sym = lambda: next(symbols))
             return new_tree
         elif isinstance(tree, Call):
             args.extend(tree.args)
@@ -190,7 +190,7 @@ def _expand_ast(tree, modules):
     def macro_expand(tree):
         """Tail Recursively expands all macros in a single AST node"""
         if isinstance(tree, With):
-            new_tree = expand_if_in_registry(tree.context_expr, [tree], block_registry)
+            new_tree = expand_if_in_registry(tree.items[0].context_expr, [tree], block_registry)
             if new_tree:
                 return macro_expand(new_tree)
 
@@ -220,12 +220,13 @@ def _expand_ast(tree, modules):
     return tree
 
 
-@sys.meta_path.append
-@singleton
+#@sys.meta_path.append
+#@singleton
 class _MacroFinder(object):
     """Loads a module and looks for macros inside, only providing a loader if
     it finds some."""
     def find_module(self, module_name, package_path):
+        #print("FInding module", module_name, package_path)
         try:
             (file, pathname, description) = imp.find_module(
                 module_name.split('.')[-1],
@@ -241,6 +242,8 @@ class _MacroFinder(object):
         except Exception as e:
             pass
 
+sys.meta_path.insert(0, _MacroFinder())
+
 def gen_syms(tree):
     """Create a generator that creates symbols which are not used in the given
     `tree`. This means they will be hygienic, i.e. it guarantees that they will
@@ -253,5 +256,5 @@ def gen_syms(tree):
 
     tree, found_names = name_finder.recurse_real(tree)
     names = ("sym" + str(i) for i in itertools.count())
-    return itertools.ifilter(lambda x: x not in found_names, names)
+    return filter(lambda x: x not in found_names, names)
 

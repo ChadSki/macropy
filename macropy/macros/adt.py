@@ -5,6 +5,10 @@ macros = Macros()
 
 NO_ARG = object()
 
+def concat(*iters):
+    for iter in iters:
+        yield from iter
+
 def link_children(cls):
     for child in cls._children:
         new_child = type(child.__name__, (cls, CaseClass), dict(**child.__dict__))
@@ -13,11 +17,11 @@ def link_children(cls):
 
 class CaseClass(object):
     def __init__(self, *args, **kwargs):
-        for k, v in zip(self.__class__._fields, args) + kwargs.items():
+        for k, v in concat(zip(self.__class__._fields, args), kwargs.items()):
             setattr(self, k, v)
 
     def copy(self, **kwargs):
-        return self.__class__(**dict(self.__dict__.items() + kwargs.items()))
+        return self.__class__(**dict(concat(self.__dict__.items(), kwargs.items())))
 
     def __str__(self):
         return self.__class__.__name__ + "(" + ", ".join(str(getattr(self, x)) for x in self.__class__._fields) + ")"

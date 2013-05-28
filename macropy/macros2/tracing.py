@@ -77,4 +77,4 @@ def require(tree):
 
     return tree.body
 
-def log(x): print x
+def log(x): print(x)

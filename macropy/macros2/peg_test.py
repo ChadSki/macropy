@@ -115,7 +115,7 @@ class Tests(unittest.TestCase):
                 "+": f%(_+_),
                 "-": f%(_-_),
                 "*": f%(_*_),
-                "/": f%(_/_),
+                "/": f%(_//_),
             }
             while len(chain) > 1:
                 a, [o, b] = chain.pop(), chain.pop()
@@ -136,14 +136,13 @@ class Tests(unittest.TestCase):
         assert expr.parse_all("(((((((11)))))+22+33)*(4+5+((6))))/12*(17+5)") == [1804]
 
 
-
     def test_bindings_json(self):
 
         def test(parser, string):
             import json
             try:
                 assert parser.parse_all(string)[0] == json.loads(string)
-            except Exception, e:
+            except Exception as e:
                 print(parser.parse_all(string))
                 print(json.loads(string))
                 raise e

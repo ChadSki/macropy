@@ -31,4 +31,4 @@ def q(tree):
 @macros.block()
 def q(tree):
     body = _unquote_search.recurse(tree.body)
-    return Assign([Name(id=tree.optional_vars.id)], ast_repr(body))
+    return Assign([Name(id=tree.items[0].optional_vars.id)], ast_repr(body))

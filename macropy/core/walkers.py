@@ -69,7 +69,7 @@ class Walker(object):
             return aggregates
 
         elif isinstance(tree, list) and len(tree) > 0:
-            x = zip(*map(lambda x: self.recurse_real(x, ctx), tree))
+            x = zip(*list(map(lambda x: self.recurse_real(x, ctx), tree)))
             [trees, aggregates] = x
             tree[:] = flatten(trees)
             return [x for y in aggregates for x in y]

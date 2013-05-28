@@ -32,7 +32,7 @@ def _PegWalker(tree, ctx):
     if type(tree) is BinOp and type(tree.op) is RShift:
         tree.left, b_left = _PegWalker.recurse_real(tree.left)
         tree.right = q%(lambda bindings: ast%tree.right)
-        tree.right.args.args = map(f%Name(id = _), flatten(b_left))
+        tree.right.args.args = list(map(f%arg(arg = _), flatten(b_left)))
         return tree, stop
 
     if type(tree) is BinOp and type(tree.op) is FloorDiv:

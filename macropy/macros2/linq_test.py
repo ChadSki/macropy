@@ -18,7 +18,7 @@ def compare_queries(query1, query2, post_process=lambda x: x):
     res2 = engine.execute(query2).fetchall()
     try:
         assert post_process(res1) == post_process(res2)
-    except Exception, e:
+    except Exception as e:
         #print "FAILURE"
         #print e
         #print query1

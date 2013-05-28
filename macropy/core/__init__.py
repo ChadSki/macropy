@@ -38,11 +38,12 @@ def ast_repr(x):
     if type(x) in (int, float): return ast.Num(n=x)
     elif type(x) is str:        return ast.Str(s=x)
     elif type(x) is bytes:      return ast.Bytes(s=x)
-    elif type(x) is list:       return ast.List(elts=map(ast_repr, x))
-    elif type(x) is dict:       return ast.Dict(keys=map(ast_repr, x.keys()), values=map(ast_repr, x.values()))
-    elif type(x) is set:        return ast.Set(elts=map(ast_repr, x))
+    elif type(x) is list:       return ast.List(elts=list(map(ast_repr, x)))
+    elif type(x) is dict:       return ast.Dict(keys=list(map(ast_repr, x.keys())), values=list(map(ast_repr, x.values())))
+    elif type(x) is set:        return ast.Set(elts=list(map(ast_repr, x)))
     elif type(x) is Literal:    return x.body
-    elif x is None:             return ast.Name(id="None")
+    elif type(x) in (bool, type(None)):          
+        return ast.NameConstant(value=x)
     elif isinstance(x, ast.AST):
         fields = [ast.keyword(a, ast_repr(b)) for a, b in ast.iter_fields(x)]
         return ast.Call(
@@ -121,6 +122,10 @@ def unparse_ast(tree):
             """Shorthand for the join+map operation"""
             return s.join(map(f, *l))
 
+        def lmap(f, *l):
+            """Python 2 map, returns list"""
+            return list(map(f, *l))
+
         type_dict = {
             #Misc
             type(None): lambda: "",
@@ -142,7 +147,7 @@ def unparse_ast(tree):
             Delete:     lambda: tabs + "del " + jmap(", ", rec, tree.targets),
             Assert:     lambda: tabs + "assert " + rec(tree.test) + mix(", ", rec(tree.msg)),
             Global:     lambda: tabs + "global " + jmap(", ", rec, tree.names),
-            NonLocal:   lambda: tabs + "nonlocal " + jmap(", ", rec, tree.names),
+            Nonlocal:   lambda: tabs + "nonlocal " + jmap(", ", rec, tree.names),
             Yield:      lambda: "(yield " + rec(tree.value) + ")",
             YieldFrom:  lambda: "(yield from " + rec(tree.value) + ")",
             Raise:      lambda: tabs + "raise " + rec(tree.exc) +
@@ -158,9 +163,9 @@ def unparse_ast(tree):
             ClassDef:   lambda: "\n" + "".join(tabs + "@" + rec(dec) for dec in tree.decorator_list) +
                                 tabs + "class " + tree.name +
                                 mix("(", ", ".join(
-                                    map(rec, tree.bases + tree.keywords) +
-                                    map(lambda e: "*"  + rec(e), tree.starargs) +
-                                    map(lambda e: "**" + rec(e), tree.kwargs)
+                                    lmap(rec, tree.bases + tree.keywords) +
+                                    lmap(lambda e: "*"  + rec(e), tree.starargs) +
+                                    lmap(lambda e: "**" + rec(e), tree.kwargs)
                                 ), ")") + ":" + irec(tree.body),
             FunctionDef: lambda: "\n" + "".join(tabs + "@" + rec(dec) for dec in tree.decorator_list) +
                                 tabs + "def " + tree.name + "(" + rec(tree.args) + ")" +
@@ -181,7 +186,6 @@ def unparse_ast(tree):
             Name:       lambda: tree.id,
             NameConstant:   lambda: str(tree.value),
             Starred:    lambda: "*" + rec(tree.value),
-            Repr:       lambda: "`" + rec(tree.value) + "`",
             Num:        lambda: (lambda repr_n:
                                     "(" + repr_n.replace("inf", INFSTR) + ")"
                                     if repr_n.startswith("-")
@@ -207,8 +211,8 @@ def unparse_ast(tree):
             Attribute:  lambda: rec(tree.value) + (" " if isinstance(tree.value, Num) and isinstance(tree.value.n, int) else "") + "." + tree.attr,
             Call:       lambda: rec(tree.func) + "(" +
                         ", ".join(
-                            map(rec, tree.args) +
-                            map(rec, tree.keywords) +
+                            lmap(rec, tree.args) +
+                            lmap(rec, tree.keywords) +
                             box(mix("*", rec(tree.starargs))) +
                             box(mix("**", rec(tree.kwargs)))
                         ) + ")",
@@ -218,12 +222,12 @@ def unparse_ast(tree):
             Slice:      lambda: rec(tree.lower) + ":" + rec(tree.upper) + mix(":", rec(tree.step)),
             ExtSlice:   lambda: jmap(", ", rec, tree.dims),
             arguments:  lambda: ", ".join(
-                            map(lambda a, d: rec(a) + mix("=", rec(d)),
+                            lmap(lambda a, d: rec(a) + mix("=", rec(d)),
                                 tree.arguments,
                                 [None] * (len(tree.args) - len(tree.defaults)) + tree.defaults
                             ) +
                             box(mix("*", tree.vararg)) +
-                            map(lambda a, d: rec(a) + "=" + rec(d),
+                            lmap(lambda a, d: rec(a) + "=" + rec(d),
                                 tree.kwonlyargs,
                                 tree.kw_defaults) +
                             box(mix("**", tree.kwarg))

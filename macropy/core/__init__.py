@@ -157,10 +157,14 @@ def unparse_ast(tree):
                                 irec(tree.body),
             ClassDef:   lambda: "\n" + "".join(tabs + "@" + rec(dec) for dec in tree.decorator_list) +
                                 tabs + "class " + tree.name +
-                                mix("(", jmap(", ", rec, tree.bases), ")") + ":" +
-                                irec(tree.body),
+                                mix("(", ", ".join(
+                                    map(rec, tree.bases + tree.keywords) +
+                                    map(lambda e: "*"  + rec(e), tree.starargs) +
+                                    map(lambda e: "**" + rec(e), tree.kwargs)
+                                ), ")") + ":" + irec(tree.body),
             FunctionDef: lambda: "\n" + "".join(tabs + "@" + rec(dec) for dec in tree.decorator_list) +
-                                tabs + "def " + tree.name + "(" + rec(tree.args) + "):" + irec(tree.body),
+                                tabs + "def " + tree.name + "(" + rec(tree.args) + ")" +
+                                mix(" -> ", rec(tree.returns)) +  ":" + irec(tree.body),
             For:        lambda: tabs + "for " + rec(tree.target) + " in " +
                                 rec(tree.iter) + ":" + irec(tree.body) +
                                 mix(tabs, "else: ", irec(tree.orelse)),

@@ -124,7 +124,7 @@ class _MacroLoader(object):
             mod.__package__ = fullname
         else:
             mod.__package__ = fullname.rpartition('.')[0]
-        exec compile(tree, self.file_name, "exec") in mod.__dict__
+        exec(compile(tree, self.file_name, "exec") in mod.__dict__)
         return mod
 
 def process_ast(tree, modules):
@@ -238,7 +238,7 @@ class _MacroFinder(object):
                 return # no macros found, carry on
             else:
                 return _MacroLoader(module_name, tree, file.name, required_pkgs)
-        except Exception, e:
+        except Exception as e:
             pass
 
 def gen_syms(tree):

@@ -220,13 +220,10 @@ def _expand_ast(tree, modules):
     return tree
 
 
-#@sys.meta_path.append
-#@singleton
 class _MacroFinder(object):
     """Loads a module and looks for macros inside, only providing a loader if
     it finds some."""
     def find_module(self, module_name, package_path):
-        #print("FInding module", module_name, package_path)
         try:
             (file, pathname, description) = imp.find_module(
                 module_name.split('.')[-1],

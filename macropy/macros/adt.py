@@ -5,7 +5,7 @@ macros = Macros()
 
 NO_ARG = object()
 
-def concat(*iters):
+def _concat(*iters):
     for iter in iters:
         yield from iter
 
@@ -17,11 +17,13 @@ def link_children(cls):
 
 class CaseClass(object):
     def __init__(self, *args, **kwargs):
-        for k, v in concat(zip(self.__class__._fields, args), kwargs.items()):
+        items = _concat(zip(self.__class__._fields, args), kwargs.items())
+        for k, v in items:
             setattr(self, k, v)
 
     def copy(self, **kwargs):
-        return self.__class__(**dict(concat(self.__dict__.items(), kwargs.items())))
+        items = _concat(self.__dict__.items(), kwargs.items())
+        return self.__class__(**dict(items))
 
     def __str__(self):
         return self.__class__.__name__ + "(" + ", ".join(str(getattr(self, x)) for x in self.__class__._fields) + ")"

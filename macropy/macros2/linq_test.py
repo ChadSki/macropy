@@ -16,17 +16,8 @@ db = generate_schema(engine)
 def compare_queries(query1, query2, post_process=lambda x: x):
     res1 = engine.execute(query1).fetchall()
     res2 = engine.execute(query2).fetchall()
-    try:
-        assert post_process(res1) == post_process(res2)
-    except Exception as e:
-        #print "FAILURE"
-        #print e
-        #print query1
-        #print "\n".join(map(str, post_process(res1)))
-        #print query2
-        #print "\n".join(map(str, post_process(res2)))
-        raise e
-
+    assert post_process(res1) == post_process(res2)
+    
 class Tests(unittest.TestCase):
 
     def test_expand_lets(self):

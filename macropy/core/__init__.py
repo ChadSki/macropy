@@ -37,6 +37,7 @@ def ast_repr(x):
     evaluated will return the given value."""
     if type(x) in (int, float): return ast.Num(n=x)
     elif type(x) is str:        return ast.Str(s=x)
+    elif type(x) is bytes:      return ast.Bytes(s=x)
     elif type(x) is list:       return ast.List(elts=map(ast_repr, x))
     elif type(x) is dict:       return ast.Dict(keys=map(ast_repr, x.keys()), values=map(ast_repr, x.values()))
     elif type(x) is set:        return ast.Set(elts=map(ast_repr, x))
@@ -140,24 +141,16 @@ def unparse_ast(tree):
             Continue:   lambda: tabs + "continue",
             Delete:     lambda: tabs + "del " + jmap(", ", rec, tree.targets),
             Assert:     lambda: tabs + "assert " + rec(tree.test) + mix(", ", rec(tree.msg)),
-            Exec:       lambda: tabs + "exec " + rec(tree.body) +
-                                mix(" in ", rec(tree.globals)) +
-                                mix(", ", rec(tree.locals)),
-            Print:      lambda: tabs + "print " +
-                                ", ".join(box(mix(">>", rec(tree.dest))) + map(rec, tree.values)) +
-                                ("," if not tree.nl else ""),
             Global:     lambda: tabs + "global " + jmap(", ", rec, tree.names),
+            NonLocal:   lambda: tabs + "nonlocal " + jmap(", ", rec, tree.names),
             Yield:      lambda: "(yield " + rec(tree.value) + ")",
-            Raise:      lambda: tabs + "raise " + rec(tree.type) +
-                                mix(", ", rec(tree.inst)) +
-                                mix(", ", rec(tree.tback)),
-            TryExcept:  lambda: tabs + "try:" + irec(tree.body) +
+            YieldFrom:  lambda: "(yield from " + rec(tree.value) + ")",
+            Raise:      lambda: tabs + "raise " + rec(tree.exc) +
+                                mix(" from " + rec(tree.cause)), # See PEP-344 for semantics
+            Try:        lambda: tabs + "try:" + irec(tree.body) +
                                 jmap("", rec, tree.handlers) +
-                                mix(tabs, "else:", irec(tree.orelse)),
-            TryFinally: lambda: (rec(tree.body)
-                                if len(tree.body) == 1 and isinstance(tree.body[0], ast.TryExcept)
-                                else tabs + "try:" + irec(tree.body)) +
-                                tabs + "finally:" + irec(tree.finalbody),
+                                mix(tabs, "else:", irec(tree.orelse)) +
+                                mix(tabs, "finally", irec(tree.finalbody)),
             ExceptHandler: lambda: tabs + "except" +
                                 mix(" ", rec(tree.type)) +
                                 mix(" as ", rec(tree.name)) + ":" +
@@ -176,13 +169,14 @@ def unparse_ast(tree):
                                 mix(tabs, "else:", irec(tree.orelse)),
             While:      lambda: tabs + "while " + rec(tree.test) + ":" + irec(tree.body) +
                                 mix(tabs, "else:", irec(tree.orelse)),
-            With:       lambda: tabs + "with " + rec(tree.context_expr) +
-                                mix(" as ", tree.optional_vars) +
-                                irec(tree.body),
+            With:       lambda: tabs + "with " + jmap(", ", rec, tree.items) + ":" + irec(tree.body),
             #Expressions
             #Str doesn't properly handle from __future__ import unicode_literals
             Str:        lambda: repr(tree.s),
+            Bytes:      lambda: repr(tree.s),
             Name:       lambda: tree.id,
+            NameConstant:   lambda: str(tree.value),
+            Starred:    lambda: "*" + rec(tree.value),
             Repr:       lambda: "`" + rec(tree.value) + "`",
             Num:        lambda: (lambda repr_n:
                                     "(" + repr_n.replace("inf", INFSTR) + ")"
@@ -225,11 +219,16 @@ def unparse_ast(tree):
                                 [None] * (len(tree.args) - len(tree.defaults)) + tree.defaults
                             ) +
                             box(mix("*", tree.vararg)) +
+                            map(lambda a, d: rec(a) + "=" + rec(d),
+                                tree.kwonlyargs,
+                                tree.kw_defaults) +
                             box(mix("**", tree.kwarg))
                         ),
+            arg:        lambda: tree.arg + mix(":", arg.annotation),
             keyword:    lambda: tree.arg + "=" + rec(tree.value),
             Lambda:     lambda: "(lambda " + rec(tree.args) + ": "+ rec(tree.body) + ")",
-            alias:      lambda: tree.name + mix(" as ", tree.asname)
+            alias:      lambda: tree.name + mix(" as ", tree.asname),
+            withitem:   lambda: rec(tree.context_expr) + mix(" as ", tree.optional_vars)
         }
 
         return type_dict[tree.__class__]()

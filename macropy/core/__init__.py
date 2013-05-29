@@ -151,7 +151,7 @@ def unparse_ast(tree):
             Yield:      lambda: "(yield " + rec(tree.value) + ")",
             YieldFrom:  lambda: "(yield from " + rec(tree.value) + ")",
             Raise:      lambda: tabs + "raise " + rec(tree.exc) +
-                                mix(" from " + rec(tree.cause)), # See PEP-344 for semantics
+                                mix(" from ", rec(tree.cause)), # See PEP-344 for semantics
             Try:        lambda: tabs + "try:" + irec(tree.body) +
                                 jmap("", rec, tree.handlers) +
                                 mix(tabs, "else:", irec(tree.orelse)) +
@@ -204,7 +204,7 @@ def unparse_ast(tree):
             UnaryOp:    lambda: "(" + unop[tree.op.__class__] +
                                 ("(" + rec(tree.operand) + ")"
                                  if type(tree.op) is USub and type(tree.operand) is Num
-                                 else rec(tree.operand)) + ")",
+                                 else " " + rec(tree.operand)) + ")",
             BinOp:      lambda: "(" + rec(tree.left) + " " + binop[tree.op.__class__] + " " + rec(tree.right) + ")",
             Compare:    lambda: "(" + rec(tree.left) + jmap("", lambda op, c: " " + cmpops[op.__class__] + " " + rec(c), tree.ops, tree.comparators) + ")",
             BoolOp:     lambda: "(" + jmap(" " + boolops[tree.op.__class__] + " ", rec, tree.values) + ")",
@@ -218,7 +218,7 @@ def unparse_ast(tree):
                         ) + ")",
             Subscript:  lambda: rec(tree.value) + "[" + rec(tree.slice) + "]",
             Ellipsis:   lambda: "...",
-            Index:      lambda: str(tree.value),
+            Index:      lambda: rec(tree.value),
             Slice:      lambda: rec(tree.lower) + ":" + rec(tree.upper) + mix(":", rec(tree.step)),
             ExtSlice:   lambda: jmap(", ", rec, tree.dims),
             arguments:  lambda: ", ".join(

@@ -158,14 +158,14 @@ def unparse_ast(tree):
                                 mix(tabs, "finally", irec(tree.finalbody)),
             ExceptHandler: lambda: tabs + "except" +
                                 mix(" ", rec(tree.type)) +
-                                mix(" as ", rec(tree.name)) + ":" +
+                                mix(" as ", tree.name) + ":" +
                                 irec(tree.body),
             ClassDef:   lambda: "\n" + "".join(tabs + "@" + rec(dec) for dec in tree.decorator_list) +
                                 tabs + "class " + tree.name +
                                 mix("(", ", ".join(
                                     lmap(rec, tree.bases + tree.keywords) +
-                                    lmap(lambda e: "*"  + rec(e), tree.starargs) +
-                                    lmap(lambda e: "**" + rec(e), tree.kwargs)
+                                    lmap(lambda e: "*"  + rec(e), box(tree.starargs)) +
+                                    lmap(lambda e: "**" + rec(e), box(tree.kwargs))
                                 ), ")") + ":" + irec(tree.body),
             FunctionDef: lambda: "\n" + "".join(tabs + "@" + rec(dec) for dec in tree.decorator_list) +
                                 tabs + "def " + tree.name + "(" + rec(tree.args) + ")" +
@@ -226,17 +226,17 @@ def unparse_ast(tree):
                                 tree.args,
                                 [None] * (len(tree.args) - len(tree.defaults)) + tree.defaults
                             ) +
-                            box(mix("*", tree.vararg)) +
+                            box(mix("*", rec(tree.vararg))) +
                             lmap(lambda a, d: rec(a) + "=" + rec(d),
                                 tree.kwonlyargs,
                                 tree.kw_defaults) +
-                            box(mix("**", tree.kwarg))
+                            box(mix("**", rec(tree.kwarg)))
                         ),
-            arg:        lambda: tree.arg + mix(":", arg.annotation),
+            arg:        lambda: tree.arg + mix(":", tree.annotation),
             keyword:    lambda: tree.arg + "=" + rec(tree.value),
             Lambda:     lambda: "(lambda " + rec(tree.args) + ": "+ rec(tree.body) + ")",
             alias:      lambda: tree.name + mix(" as ", tree.asname),
-            withitem:   lambda: rec(tree.context_expr) + mix(" as ", tree.optional_vars)
+            withitem:   lambda: rec(tree.context_expr) + mix(" as ", rec(tree.optional_vars))
         }
 
         return type_dict[tree.__class__]()

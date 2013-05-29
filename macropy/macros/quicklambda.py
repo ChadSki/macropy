@@ -19,5 +19,5 @@ def f(tree, gen_sym, **kw):
     tree, used_names = underscore_search.recurse_real(tree)
 
     new_tree = q%(lambda: ast%tree)
-    new_tree.args.args = [arg(arg = x) for x in used_names]
+    new_tree.args.args = [arg(arg = x, annotation=None) for x in used_names]
     return new_tree

@@ -23,7 +23,8 @@ def trace_walk(tree, ctx, **kw):
             tree._fields != () and \
             type(tree) is not Num and \
             type(tree) is not Str and \
-            type(tree) is not Name:
+            type(tree) is not Name and \
+            type(tree) is not NameConstant:
 
         try:
             literal_eval(tree)

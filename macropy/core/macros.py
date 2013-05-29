@@ -124,6 +124,8 @@ class _MacroLoader(object):
             mod.__package__ = fullname
         else:
             mod.__package__ = fullname.rpartition('.')[0]
+        print(ast.dump(tree))
+        print(unparse_ast(tree))
         exec(compile(tree, self.file_name, "exec"), mod.__dict__)
         return mod
 
@@ -180,6 +182,7 @@ def _expand_ast(tree, modules):
             if pos:
                 if type(new_tree) is list:
                     new_tree = flatten(new_tree)
+                    # why is this like this?
                     (new_tree[0].lineno, new_tree[0].col_offset) = pos
                 else:
                     (new_tree.lineno, new_tree.col_offset) = pos

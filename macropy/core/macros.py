@@ -69,7 +69,7 @@ def fill_line_numbers(tree, lineno, col_offset):
             fill_line_numbers(sub, tree.lineno, tree.col_offset)
 
 @Walker
-def _ast_ctx_fixer(tree, ctx):
+def _ast_ctx_fixer(tree, ctx, **kw):
     """Fix any missing `ctx` attributes within an AST; allows you to build
     your ASTs without caring about that stuff and just filling it in later."""
     if "ctx" in type(tree)._fields and not hasattr(tree, "ctx"):
@@ -161,16 +161,14 @@ def _expand_ast(tree, modules):
 
     symbols = gen_syms(tree)
 
-    def expand_if_in_registry(tree, args, registry):
+    def expand_if_in_registry(tree, body, args, registry, **kwargs):
         """check if `tree` is a macro in `registry`, and if so use it to expand `args`"""
         if isinstance(tree, Name) and tree.id in registry:
             the_macro, inside_out = registry[tree.id]
-            new_tree = safe_splat(the_macro, *args, gen_sym = lambda: next(symbols))
-            return new_tree
+            return the_macro(tree=body, args=args, gen_sym = lambda: next(symbols), **kwargs)
         elif isinstance(tree, Call):
             args.extend(tree.args)
-            res = expand_if_in_registry(tree.func, args, registry)
-            return res
+            return expand_if_in_registry(tree.func, body, args, registry)
 
     def preserve_line_numbers(func):
         """Decorates a tree-transformer function to stick the original line
@@ -178,8 +176,10 @@ def _expand_ast(tree, modules):
         def run(tree):
             pos = (tree.lineno, tree.col_offset) if hasattr(tree, "lineno") and hasattr(tree, "col_offset") else None
             new_tree = func(tree)
+
             if pos:
                 if type(new_tree) is list:
+                    new_tree = flatten(new_tree)
                     (new_tree[0].lineno, new_tree[0].col_offset) = pos
                 else:
                     (new_tree.lineno, new_tree.col_offset) = pos
@@ -190,29 +190,44 @@ def _expand_ast(tree, modules):
     def macro_expand(tree):
         """Tail Recursively expands all macros in a single AST node"""
         if isinstance(tree, With):
-            new_tree = expand_if_in_registry(tree.items[0].context_expr, [tree], block_registry)
+            assert isinstance(tree.body, list), real_repr(tree.body)
+            new_tree = tree
+            for with_stmt in tree.items:
+                new_tree = expand_if_in_registry(with_stmt.context_expr, new_tree.body, [], block_registry, target=with_stmt.context_expr)
             if new_tree:
+                assert isinstance(new_tree, list), type(new_tree)
                 return macro_expand(new_tree)
 
         if isinstance(tree, BinOp) and type(tree.op) is Mod:
-            new_tree = expand_if_in_registry(tree.left, [tree.right], expr_registry)
+            new_tree = expand_if_in_registry(tree.left, tree.right, [], expr_registry)
+
             if new_tree:
+                assert isinstance(new_tree, expr), type(new_tree)
                 return macro_expand(new_tree)
 
         if isinstance(tree, ClassDef) or isinstance(tree, FunctionDef):
-            decorators = tree.decorator_list
-            for dec in decorators:
-                new_tree = expand_if_in_registry(dec, [tree], decorator_registry)
-                if new_tree is not None:
+            all_decs = tree.decorator_list[:]
+            seen_decs = []
+            while tree.decorator_list != []:
+                dec = tree.decorator_list[0]
+                tree.decorator_list = tree.decorator_list[1:]
+
+                new_tree = expand_if_in_registry(dec, tree, [], decorator_registry)
+                if new_tree is None:
+
+                    seen_decs.append(dec)
+                else:
                     tree = new_tree
-                    new_tree.decorator_list.remove(dec)
-                    return macro_expand(tree)
+                    tree = macro_expand(tree)
+
+            tree.decorator_list = seen_decs
+            return tree
 
         return tree
 
 
     @Walker
-    def macro_searcher(tree):
+    def macro_searcher(tree, **kw):
         return macro_expand(tree)
 
     tree = macro_searcher.recurse(tree)
@@ -247,7 +262,7 @@ def gen_syms(tree):
     not cause accidental shadowing, as long as the scope of the new symbol is
     limited to `tree` e.g. by a lambda expression or a function body"""
     @Walker
-    def name_finder(tree):
+    def name_finder(tree, **kw):
         if type(tree) is Name:
             return collect(tree.id)
 

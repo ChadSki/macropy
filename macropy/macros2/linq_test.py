@@ -17,7 +17,7 @@ def compare_queries(query1, query2, post_process=lambda x: x):
     res1 = engine.execute(query1).fetchall()
     res2 = engine.execute(query2).fetchall()
     assert post_process(res1) == post_process(res2)
-    
+
 class Tests(unittest.TestCase):
 
     def test_expand_lets(self):

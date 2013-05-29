@@ -7,6 +7,8 @@ def run(x):
 
 from macropy import core_tests
 run(core_tests.Tests)
+from macropy.core import walkers_test
+run(walkers_test.Tests)
 
 from macropy.core import lift_test
 run(lift_test.Tests)
@@ -38,7 +40,7 @@ run(tco_test.Tests)
 # this one creates a sqlite database to run, so may take a while
 from macropy.macros2 import linq_test
 run(linq_test.Tests)
-
-# this one needs chromedriver in order to run the javascript using Selenium
+#
+# # this one needs chromedriver in order to run the javascript using Selenium
 from macropy.macros2 import javascript_test
 run(javascript_test.Tests)

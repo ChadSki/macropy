@@ -193,7 +193,8 @@ def _expand_ast(tree, modules):
             assert isinstance(tree.body, list), real_repr(tree.body)
             new_tree = tree
             for with_stmt in tree.items:
-                new_tree = expand_if_in_registry(with_stmt.context_expr, new_tree.body, [], block_registry, target=with_stmt.context_expr)
+                new_tree = expand_if_in_registry(with_stmt.context_expr, new_tree.body, [], 
+                                                block_registry, target=with_stmt.optional_vars)
             if new_tree:
                 assert isinstance(new_tree, list), type(new_tree)
                 return macro_expand(new_tree)
@@ -245,6 +246,7 @@ class _MacroFinder(object):
                 package_path
             )
             txt = file.read()
+            file.close()
             tree = ast.parse(txt)
             required_pkgs = detect_macros(tree)
             if required_pkgs == []:
